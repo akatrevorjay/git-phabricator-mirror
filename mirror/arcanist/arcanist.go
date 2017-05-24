@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -101,8 +101,20 @@ func runArcCommandOrDie(method string, request interface{}, response interface{}
 	}
 	logger.Infof("Received conduit response ", stdout.String())
 	if err = json.Unmarshal(stdout.Bytes(), response); err != nil {
+		logger.Errorf("JSON: %s", prettyJSONString(stdout.Bytes()))
 		orPanic(err)
 	}
+}
+
+func prettyJSONString(str []byte) string {
+	var buf bytes.Buffer
+	err := json.Indent(&buf, str, "", "	")
+	if err != nil {
+		logger.Errorf("JSON parse error: %v", err.Error())
+		buf.Write(str)
+	}
+
+	return buf.String()
 }
 
 func abbreviateRefName(ref string) string {
