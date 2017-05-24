@@ -1,4 +1,4 @@
-package: github.com/google/git-phabricator-mirror
+package: github.com/akatrevorjay/git-phabricator-mirror
 import:
 - package: github.com/akatrevorjay/git-appraise
   subpackages:
