@@ -108,9 +108,9 @@ func runArcCommandOrDie(method string, request interface{}, response interface{}
 
 func prettyJSONString(str []byte) string {
 	var buf bytes.Buffer
-	err := json.Indent(&buf, str, "", "	")
+	err := json.Indent(&buf, str, "", "    ")
 	if err != nil {
-		logger.Errorf("JSON parse error: %v", err.Error())
+		logger.Errorf("JSON parse error: \n%v", err.Error())
 		buf.Write(str)
 	}
 

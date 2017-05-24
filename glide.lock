@@ -1,5 +1,5 @@
 hash: 155f659df254d1faceedf6e95bd1f7f5cb2dd06756dd9ab98dfb6a3431f339c7
-updated: 2017-05-23T22:14:07.304277184-07:00
+updated: 2017-05-24T01:33:20.703035177-07:00
 imports:
 - name: github.com/akatrevorjay/git-appraise
   version: bcf5cfe2d8d4739ba172a20a6e81328011235638
@@ -10,4 +10,6 @@ imports:
   - review/ci
   - review/comment
   - review/request
+- name: github.com/op/go-logging
+  version: b2cb9fa56473e98db8caba80237377e83fe44db5
 testImports: []
