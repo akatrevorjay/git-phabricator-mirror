@@ -23,7 +23,7 @@ import (
 	"github.com/akatrevorjay/git-appraise/review/comment"
 	"github.com/akatrevorjay/git-phabricator-mirror/mirror/arcanist"
 	review_utils "github.com/akatrevorjay/git-phabricator-mirror/mirror/review"
-	"log"
+	"github.com/op/go-logging"
 )
 
 var arc = arcanist.Arcanist{}
@@ -52,16 +52,16 @@ func mirrorRepoToReview(repo repository.Repo, tool review_utils.Tool, syncToRemo
 
 	stateHash, err := repo.GetRepoStateHash()
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	if processedStates[repo.GetPath()] != stateHash {
-		log.Print("Mirroring repo: ", repo)
+		logger.Print("Mirroring repo: ", repo)
 		for _, r := range review.ListAll(repo) {
 			reviewJson, err := r.GetJSON()
 			if err != nil {
-				log.Panic(err)
+				logger.Panic(err)
 			}
-			log.Println("Mirroring review: ", reviewJson)
+			logger.Println("Mirroring review: ", reviewJson)
 			existingComments[r.Revision] = r.Comments
 			reviewDetails, err := r.Details()
 			if err == nil {
@@ -75,34 +75,34 @@ func mirrorRepoToReview(repo repository.Repo, tool review_utils.Tool, syncToRemo
 ReviewLoop:
 	for _, phabricatorReview := range openReviews[repo.GetPath()] {
 		if reviewCommit := phabricatorReview.GetFirstCommit(repo); reviewCommit != "" {
-			log.Println("Processing review: ", reviewCommit)
+			logger.Println("Processing review: ", reviewCommit)
 			r, err := review.GetSummary(repo, reviewCommit)
 			if err != nil {
-				log.Panic(err)
+				logger.Panic(err)
 			} else if r == nil {
-				log.Printf("Skipping unknown review %q", reviewCommit)
+				logger.Printf("Skipping unknown review %q", reviewCommit)
 				continue ReviewLoop
 			}
 			revisionComments := existingComments[reviewCommit]
-			log.Printf("Loaded %d comments for %v\n", len(revisionComments), reviewCommit)
+			logger.Printf("Loaded %d comments for %v\n", len(revisionComments), reviewCommit)
 			for _, c := range phabricatorReview.LoadComments() {
 				if !hasOverlap(c, revisionComments) {
 					// The comment is new.
 					note, err := c.Write()
 					if err != nil {
-						log.Panic(err)
+						logger.Panic(err)
 					}
-					log.Printf("Appending a comment: %s", string(note))
+					logger.Printf("Appending a comment: %s", string(note))
 					repo.AppendNote(comment.Ref, reviewCommit, note)
 				} else {
-					log.Printf("Skipping '%v', as it has already been written\n", c)
+					logger.Printf("Skipping '%v', as it has already been written\n", c)
 				}
 			}
 		}
 	}
 	if syncToRemote {
 		if err := repo.PushNotes("origin", "refs/notes/devtools/*"); err != nil {
-			log.Printf("Failed to push updates to the repo %v: %v\n", repo, err)
+			logger.Printf("Failed to push updates to the repo %v: %v\n", repo, err)
 		}
 	}
 }

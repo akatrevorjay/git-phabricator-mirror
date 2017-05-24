@@ -28,7 +28,7 @@ import (
 	"github.com/akatrevorjay/git-appraise/review/comment"
 	"github.com/akatrevorjay/git-appraise/review/request"
 	review_utils "github.com/akatrevorjay/git-phabricator-mirror/mirror/review"
-	"log"
+	"github.com/op/go-logging"
 	"os/exec"
 	"sort"
 	"strconv"
@@ -81,27 +81,27 @@ func runArcCommandOrDie(method string, request interface{}, response interface{}
 	cmd := exec.Command("arc", "call-conduit", method)
 	input, err := json.Marshal(request)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
-	log.Print("Running conduit request: ", method, string(input))
+	logger.Print("Running conduit request: ", method, string(input))
 	cmd.Stdin = strings.NewReader(string(input))
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	if err := cmd.Start(); err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	go func() {
 		time.Sleep(arcanistRequestTimeout)
 		cmd.Process.Kill()
 	}()
 	if err := cmd.Wait(); err != nil {
-		log.Print("arc", "call-conduit", method, string(input), stdout.String())
-		log.Panic(err)
+		logger.Print("arc", "call-conduit", method, string(input), stdout.String())
+		logger.Panic(err)
 	}
-	log.Print("Received conduit response ", stdout.String())
+	logger.Print("Received conduit response ", stdout.String())
 	if err = json.Unmarshal(stdout.Bytes(), response); err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 }
 
@@ -120,7 +120,8 @@ type DifferentialReview struct {
 	Status     string     `json:"status,omitempty"`
 	StatusName string     `json:"statusName,omitempty"`
 	AuthorPHID string     `json:"authorPHID,omitempty"`
-	Reviewers  []string   `json:"reviewers,omitempty"`
+	//Reviewers  []string   `json:"reviewers,omitempty"`
+	Reviewers  map[string]string `json:"reviewers,omitempty"`
 	Hashes     [][]string `json:"hashes,omitempty"`
 	Diffs      []string   `json:"diffs,omitempty"`
 }
@@ -179,7 +180,7 @@ func (arc Arcanist) listDifferentialReviewsOrDie(revision string) []Differential
 	return response.Response
 }
 
-func (arc Arcanist) ListOpenReviews(repo repository.Repo) []review_utils.PhabricatorReview {
+func(arc Arcanist) ListOpenReviews(repo repository.Repo) []review_utils.PhabricatorReview {
 	// TODO(ojarjur): Filter the query by the repo.
 	// As is, we simply return all open reviews for *any* repo, and then filter in
 	// the calling level.
@@ -236,7 +237,7 @@ func (arc Arcanist) createDifferentialRevision(repo repository.Repo, revision st
 	for _, reviewer := range req.Reviewers {
 		user, err := queryUser(reviewer)
 		if err != nil {
-			log.Print(err)
+			logger.Print(err)
 		} else if user != nil {
 			fields.Reviewers = append(fields.Reviewers, user.PHID)
 		}
@@ -244,7 +245,7 @@ func (arc Arcanist) createDifferentialRevision(repo repository.Repo, revision st
 	if req.Requester != "" {
 		user, err := queryUser(req.Requester)
 		if err != nil {
-			log.Print(err)
+			logger.Print(err)
 		} else if user != nil {
 			fields.CCs = append(fields.CCs, user.PHID)
 		}
@@ -287,14 +288,14 @@ type differentialCloseResponse struct {
 func (differentialReview DifferentialReview) close() {
 	reviewID, err := strconv.Atoi(differentialReview.ID)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	closeRequest := differentialCloseRequest{reviewID}
 	var closeResponse differentialCloseResponse
 	runArcCommandOrDie("differential.close", closeRequest, &closeResponse)
 	if closeResponse.Error != "" {
 		// This might happen if someone merged in a review that wasn't accepted yet, or if the review is not owned by the robot account.
-		log.Println(closeResponse.ErrorMessage)
+		logger.Println(closeResponse.ErrorMessage)
 	}
 }
 
@@ -437,7 +438,7 @@ func (arc Arcanist) mirrorStatusesForEachCommit(r review.Review, commitToDiffIDM
 		ciReports := ci.ParseAllValid(ciNotes)
 		latestCIReport, err := ci.GetLatestCIReport(ciReports)
 		if err != nil {
-			log.Println("Failed to load the continuous integration reports: " + err.Error())
+			logger.Println("Failed to load the continuous integration reports: " + err.Error())
 		} else if latestCIReport != nil {
 			arc.reportUnitResults(diffID, *latestCIReport)
 		}
@@ -446,11 +447,11 @@ func (arc Arcanist) mirrorStatusesForEachCommit(r review.Review, commitToDiffIDM
 		analysesReports := analyses.ParseAllValid(analysesNotes)
 		latestAnalysesReport, err := analyses.GetLatestAnalysesReport(analysesReports)
 		if err != nil {
-			log.Println("Failed to load the static analysis reports: " + err.Error())
+			logger.Println("Failed to load the static analysis reports: " + err.Error())
 		} else if latestAnalysesReport != nil {
 			lintResults, err := latestAnalysesReport.GetLintReportResult()
 			if err != nil {
-				log.Println("Failed to load the static analysis reports: " + err.Error())
+				logger.Println("Failed to load the static analysis reports: " + err.Error())
 			} else {
 				arc.reportLintResults(diffID, lintResults)
 			}
@@ -477,14 +478,14 @@ func (arc Arcanist) mirrorCommentsIntoReview(repo repository.Repo, differentialR
 		var response createInlineResponse
 		runArcCommandOrDie("differential.createinline", request, &response)
 		if response.Error != "" {
-			log.Println(response.ErrorMessage)
+			logger.Println(response.ErrorMessage)
 		}
 	}
 	for _, request := range commentRequests {
 		var response createCommentResponse
 		runArcCommandOrDie("differential.createcomment", request, &response)
 		if response.Error != "" {
-			log.Println(response.ErrorMessage)
+			logger.Println(response.ErrorMessage)
 		}
 	}
 }
@@ -512,13 +513,13 @@ func generateUnitDiffProperty(report ci.Report) (string, error) {
 }
 
 func (arc Arcanist) reportUnitResults(diffID int, unitReport ci.Report) {
-	log.Printf("The latest unit report for diff %d is %s ", diffID, unitReport)
+	logger.Printf("The latest unit report for diff %d is %s ", diffID, unitReport)
 	diffProperty, err := generateUnitDiffProperty(unitReport)
 	if err == nil && diffProperty != "" {
 		err = arc.setDiffProperty(diffID, unitDiffPropertyName, diffProperty)
 	}
 	if err != nil {
-		log.Panic(err.Error())
+		logger.Panic(err.Error())
 	}
 }
 
@@ -547,13 +548,13 @@ func generateLintDiffProperty(lintResults []analyses.AnalyzeResponse) (string, e
 }
 
 func (arc Arcanist) reportLintResults(diffID int, lintResults []analyses.AnalyzeResponse) {
-	log.Printf("The latest lint report for diff %d is %s ", diffID, lintResults)
+	logger.Printf("The latest lint report for diff %d is %s ", diffID, lintResults)
 	diffProperty, err := generateLintDiffProperty(lintResults)
 	if err == nil && diffProperty != "" {
 		err = arc.setDiffProperty(diffID, lintDiffPropertyName, diffProperty)
 	}
 	if err != nil {
-		log.Panic(err.Error())
+		logger.Panic(err.Error())
 	}
 }
 
@@ -569,7 +570,7 @@ func (arc Arcanist) updateReviewDiffs(repo repository.Repo, differentialReview D
 	headRevision := headCommit
 	mergeBase, err := repo.MergeBase(req.TargetRef, headRevision)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	for _, hashPair := range differentialReview.Hashes {
 		if len(hashPair) == 2 && hashPair[0] == commitHashType && hashPair[1] == headCommit {
@@ -582,7 +583,7 @@ func (arc Arcanist) updateReviewDiffs(repo repository.Repo, differentialReview D
 
 	diff, err := arc.createDifferentialDiff(repo, mergeBase, headRevision, req, differentialReview.Diffs)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	if diff == nil {
 		// This means that phabricator silently refused to create the diff. Just move on.
@@ -593,7 +594,7 @@ func (arc Arcanist) updateReviewDiffs(repo repository.Repo, differentialReview D
 	var updateResponse differentialUpdateRevisionResponse
 	runArcCommandOrDie("differential.updaterevision", updateRequest, &updateResponse)
 	if updateResponse.Error != "" {
-		log.Panic(updateResponse.ErrorMessage)
+		logger.Panic(updateResponse.ErrorMessage)
 	}
 }
 
@@ -623,7 +624,7 @@ func (arc Arcanist) EnsureRequestExists(repo repository.Repo, review review.Revi
 		// There are lots of reasons that we might not be able to compute a base commit,
 		// (e.g. the revision already being merged in, or being dropped and garbage collected),
 		// but they all indicate that the review request is no longer valid.
-		log.Printf("Ignoring review request '%v', because we could not compute a base commit", req)
+		logger.Printf("Ignoring review request '%v', because we could not compute a base commit", req)
 		return
 	}
 
@@ -631,7 +632,7 @@ func (arc Arcanist) EnsureRequestExists(repo repository.Repo, review review.Revi
 	if err != nil {
 		// The given review ref has been deleted (or never existed), but the change wasn't merged.
 		// TODO(ojarjur): We should mark the existing reviews as abandoned.
-		log.Printf("Ignoring review because the review ref '%s' does not exist", req.ReviewRef)
+		logger.Printf("Ignoring review because the review ref '%s' does not exist", req.ReviewRef)
 		return
 	}
 
@@ -645,7 +646,7 @@ func (arc Arcanist) EnsureRequestExists(repo repository.Repo, review review.Revi
 
 	diff, err := arc.createDifferentialDiff(repo, base, revision, req, []string{})
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	if diff == nil {
 		// The revision is already merged in, ignore it.
@@ -653,9 +654,9 @@ func (arc Arcanist) EnsureRequestExists(repo repository.Repo, review review.Revi
 	}
 	rev, err := arc.createDifferentialRevision(repo, revision, diff.ID, req)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
-	log.Printf("Created diff %v and revision %v for the review of %s", diff, rev, revision)
+	logger.Printf("Created diff %v and revision %v for the review of %s", diff, rev, revision)
 
 	// If the review already contains multiple commits by the time we mirror it, then
 	// we need to ensure that at least the first and last ones are added.

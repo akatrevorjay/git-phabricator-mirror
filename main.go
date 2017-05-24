@@ -20,7 +20,7 @@ import (
 	"flag"
 	"github.com/akatrevorjay/git-appraise/repository"
 	"github.com/akatrevorjay/git-phabricator-mirror/mirror"
-	"log"
+	"github.com/op/go-logging"
 	"os"
 	"path/filepath"
 	"time"
@@ -52,7 +52,34 @@ func findRepos(searchDir string) ([]repository.Repo, error) {
 	return repos, nil
 }
 
+// InitLoggers initialize loggers
+func InitLoggers(verbosity int) (err error) {
+	var format = logging.MustStringFormatter(
+		`%{color}%{time:15:04:05.000} %{module} %{longfunc}: %{color:bold}%{message} %{color:reset}%{color}@%{shortfile} %{color}#%{level}%{color:reset}`,
+	)
+
+	backend := logging.NewLogBackend(os.Stderr, "", 0)
+	formatter := logging.NewBackendFormatter(backend, format)
+	//logging.SetBackend(formatter)
+
+	leveledBackend := logging.AddModuleLevel(formatter)
+
+	switch {
+	case verbosity == 1:
+		logging.SetLevel(logging.INFO, "")
+		leveledBackend.SetLevel(logging.INFO, "")
+	case verbosity >= 2:
+		logging.SetLevel(logging.DEBUG, "")
+		leveledBackend.SetLevel(logging.DEBUG, "")
+	}
+
+	logging.SetBackend(leveledBackend)
+	return
+}
+
 func main() {
+	InitLoggers(9)
+
 	flag.Parse()
 	// We want to always start processing new repos that are added after the binary has started,
 	// so we need to run the findRepos method in an infinite loop.
@@ -61,7 +88,7 @@ func main() {
 	for {
 		repos, err := findRepos(*searchDir)
 		if err != nil {
-			log.Panic(err.Error())
+			logger.Panic(err.Error())
 		}
 		for _, repo := range repos {
 			mirror.Repo(repo, *syncToRemote)

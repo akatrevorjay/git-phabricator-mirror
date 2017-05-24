@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"github.com/akatrevorjay/git-appraise/repository"
 	"github.com/akatrevorjay/git-appraise/review/request"
-	"log"
+	"github.com/op/go-logging"
 	"sort"
 	"strconv"
 )
@@ -84,7 +84,7 @@ func findLastCommit(commitsMap map[string]interface{}) string {
 			if ok {
 				timestamp, err := strconv.Atoi(timestampString)
 				if err != nil {
-					log.Panic(err)
+					logger.Panic(err)
 				}
 				timestamps = append(timestamps, timestamp)
 				timestampCommitMap[timestamp] = commit

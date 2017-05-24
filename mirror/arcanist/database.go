@@ -30,7 +30,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/akatrevorjay/git-appraise/review/comment"
-	"log"
+	"github.com/op/go-logging"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -92,8 +92,8 @@ func runRawSqlCommandOrDie(command string) string {
 		cmd.Process.Kill()
 	}()
 	if err := cmd.Wait(); err != nil {
-		log.Println("Ran SQL command: ", command)
-		log.Panic(err)
+		logger.Println("Ran SQL command: ", command)
+		logger.Panic(err)
 	}
 	result := strings.TrimSuffix(stdout.String(), "\n")
 	return result
@@ -115,8 +115,8 @@ func runSqlCommandOrDie(command string) string {
 		cmd.Process.Kill()
 	}()
 	if err := cmd.Wait(); err != nil {
-		log.Println("Ran SQL command: ", command)
-		log.Panic(err)
+		logger.Println("Ran SQL command: ", command)
+		logger.Panic(err)
 	}
 	result := strings.Trim(stdout.String(), "\n")
 	return result
@@ -207,12 +207,12 @@ func readDatabaseTransactionComment(transactionID string) (*differentialDatabase
 		diffIDResult := runSqlCommandOrDie(fmt.Sprintf(selectChangesetDiffTemplate, changesetID))
 		diffID, err := strconv.Atoi(diffIDResult)
 		if err != nil {
-			log.Println(diffIDResult)
-			log.Panic(err)
+			logger.Println(diffIDResult)
+			logger.Panic(err)
 		}
 		diff, err := readDiff(diffID)
 		if err != nil {
-			log.Panic(err)
+			logger.Panic(err)
 		}
 		comment.Commit = diff.findLastCommit()
 	}
@@ -239,17 +239,17 @@ func LoadComments(review DifferentialReview, readTransactions ReadTransactions, 
 
 	allTransactions, err := readTransactions(review.PHID)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	var comments []comment.Comment
 	commentsByPHID := make(map[string]comment.Comment)
 	rejectionCommentsByUser := make(map[string][]string)
 
-	log.Printf("LOADCOMMENTS: Returning %d transactions", len(allTransactions))
+	logger.Printf("LOADCOMMENTS: Returning %d transactions", len(allTransactions))
 	for _, transaction := range allTransactions {
 		author, err := lookupUser(transaction.AuthorPHID)
 		if err != nil {
-			log.Panic(err)
+			logger.Panic(err)
 		}
 		c := comment.Comment{
 			Author:    author.Email,
@@ -264,7 +264,7 @@ func LoadComments(review DifferentialReview, readTransactions ReadTransactions, 
 		if transaction.CommentPHID != nil {
 			transactionComment, err := readTransactionComment(transaction.PHID)
 			if err != nil {
-				log.Panic(err)
+				logger.Panic(err)
 			}
 			if transactionComment.FileName != "" {
 				c.Location = &comment.Location{
@@ -284,7 +284,7 @@ func LoadComments(review DifferentialReview, readTransactions ReadTransactions, 
 				if replyTo, ok := commentsByPHID[*transactionComment.ReplyToCommentPHID]; ok {
 					parentHash, err := replyTo.Hash()
 					if err != nil {
-						log.Panic(err)
+						logger.Panic(err)
 					}
 					c.Parent = parentHash
 				}
@@ -308,7 +308,7 @@ func LoadComments(review DifferentialReview, readTransactions ReadTransactions, 
 						Parent:    rejectionCommentHash,
 					}
 					comments = append(comments, approveComment)
-					log.Printf("LOADCOMMENTS: Received approval. Adding child comment %v with parent hash %x", approveComment, rejectionCommentHash)
+					logger.Printf("LOADCOMMENTS: Received approval. Adding child comment %v with parent hash %x", approveComment, rejectionCommentHash)
 				}
 			} else if action == "\"reject\"" {
 				resolved = false
@@ -328,15 +328,15 @@ func LoadComments(review DifferentialReview, readTransactions ReadTransactions, 
 			if c.Resolved != nil && *c.Resolved == false {
 				commentHash, err := c.Hash()
 				if err != nil {
-					log.Panic(err)
+					logger.Panic(err)
 				}
-				log.Printf("LOADCOMMENTS: Received rejection. Adding comment %v with hash %x", c, commentHash)
+				logger.Printf("LOADCOMMENTS: Received rejection. Adding comment %v with hash %x", c, commentHash)
 				rejectionCommentsByUser[author.UserName] = append(rejectionCommentsByUser[author.UserName], commentHash)
 			}
 
 		}
 	}
 
-	log.Printf("LOADCOMMENTS: Returning %d comments", len(comments))
+	logger.Printf("LOADCOMMENTS: Returning %d comments", len(comments))
 	return comments
 }
