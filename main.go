@@ -30,6 +30,30 @@ var searchDir = flag.String("search_dir", "/var/repo", "Directory under which to
 var syncToRemote = flag.Bool("sync_to_remote", false, "Sync the local repos (including git notes) to their remotes")
 var syncPeriod = flag.Int("sync_period", 30, "Expected number of seconds between subsequent syncs of a repo.")
 
+var logger = logging.MustGetLogger("mirror")
+
+func orPanic(err error) {
+	if err == nil {
+		return
+	}
+	logger.Panic(err)
+	panic(err)
+}
+
+func orFatalf(err error) {
+	if err == nil {
+		return
+	}
+	logger.Fatalf("Error: %s", err.Error())
+}
+
+func orErrorf(err error) {
+	if err == nil {
+		return
+	}
+	logger.Errorf("Error: %s", err.Error())
+}
+
 func findRepos(searchDir string) ([]repository.Repo, error) {
 	// This method finds repos by recursively traversing the given directory,
 	// and looking for any git repos.

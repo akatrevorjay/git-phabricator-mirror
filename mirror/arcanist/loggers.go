@@ -18,7 +18,7 @@ func orFatalf(err error) {
 	if err == nil {
 		return
 	}
-	logger.Fatalf("Error: %s", err.Error())
+	logger.Errorf("Error: %s", err.Error())
 }
 
 func orErrorf(err error) {
