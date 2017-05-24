@@ -45,6 +45,8 @@ func hasOverlap(newComment comment.Comment, existingComments []review.CommentThr
 }
 
 func mirrorRepoToReview(repo repository.Repo, tool review_utils.Tool, syncToRemote bool) {
+	logger.Infof("Start repo=%s tool=%s syncToRemote=%s", repo, tool, syncToRemote)
+
 	if syncToRemote {
 		repo.PullNotes("origin", "refs/notes/devtools/*")
 	}
@@ -54,13 +56,13 @@ func mirrorRepoToReview(repo repository.Repo, tool review_utils.Tool, syncToRemo
 		orPanic(err)
 	}
 	if processedStates[repo.GetPath()] != stateHash {
-		logger.Infof("Mirroring repo: ", repo)
+		logger.Infof("Mirroring repo: %s", repo)
 		for _, r := range review.ListAll(repo) {
 			reviewJson, err := r.GetJSON()
 			if err != nil {
 				orPanic(err)
 			}
-			logger.Infof("Mirroring review: ", reviewJson)
+			logger.Infof("Mirroring review: %s", reviewJson)
 			existingComments[r.Revision] = r.Comments
 			reviewDetails, err := r.Details()
 			if err == nil {
@@ -71,10 +73,11 @@ func mirrorRepoToReview(repo repository.Repo, tool review_utils.Tool, syncToRemo
 		processedStates[repo.GetPath()] = stateHash
 		tool.Refresh(repo)
 	}
+
 ReviewLoop:
 	for _, phabricatorReview := range openReviews[repo.GetPath()] {
 		if reviewCommit := phabricatorReview.GetFirstCommit(repo); reviewCommit != "" {
-			logger.Infof("Processing review: ", reviewCommit)
+			logger.Infof("Processing review: %s", reviewCommit)
 			r, err := review.GetSummary(repo, reviewCommit)
 			if err != nil {
 				orPanic(err)
@@ -109,5 +112,6 @@ ReviewLoop:
 // Repo mirrors the given repository using the system-wide installation of
 // the "arcanist" command line tool.
 func Repo(repo repository.Repo, syncToRemote bool) {
+	arc.Refresh(repo)
 	mirrorRepoToReview(repo, arc, syncToRemote)
 }

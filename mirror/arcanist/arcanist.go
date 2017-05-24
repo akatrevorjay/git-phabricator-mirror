@@ -34,6 +34,7 @@ import (
 	"github.com/akatrevorjay/git-appraise/review/comment"
 	"github.com/akatrevorjay/git-appraise/review/request"
 	review_utils "github.com/akatrevorjay/git-phabricator-mirror/mirror/review"
+	utils "github.com/akatrevorjay/git-appraise/utils"
 )
 
 // commitHashType is a special string that Phabricator uses internally to distinguish
@@ -99,9 +100,8 @@ func runArcCommandOrDie(method string, request interface{}, response interface{}
 		logger.Error("Error running", "arc", "call-conduit", method, string(input), stdout.String())
 		orPanic(err)
 	}
-	logger.Infof("Received conduit response ", stdout.String())
+	logger.Debugf("Received conduit response %s", prettyJSONString(stdout.Bytes()))
 	if err = json.Unmarshal(stdout.Bytes(), response); err != nil {
-		logger.Errorf("JSON: %s", prettyJSONString(stdout.Bytes()))
 		orPanic(err)
 	}
 }
@@ -132,10 +132,40 @@ type DifferentialReview struct {
 	Status     string `json:"status,omitempty"`
 	StatusName string `json:"statusName,omitempty"`
 	AuthorPHID string `json:"authorPHID,omitempty"`
-	//Reviewers  []string   `json:"reviewers,omitempty"`
-	Reviewers map[string]string `json:"reviewers,omitempty"`
+	ReviewersRaw json.RawMessage `json:"reviewers,omitempty"`
+	Reviewers  []string `json:"-"`
 	Hashes    [][]string        `json:"hashes,omitempty"`
 	Diffs     []string          `json:"diffs,omitempty"`
+}
+
+// Used to avoid recursion in UnmarshalJSON below.
+type differentialReviewHack DifferentialReview
+
+func (r *DifferentialReview) UnmarshalJSON(b []byte) error {
+	drh := differentialReviewHack{}
+	if err := json.Unmarshal(b, &drh); err != nil {
+		return err
+	}
+	*r = DifferentialReview(drh)
+
+	var reviewersArray []string
+	if err := json.Unmarshal(r.ReviewersRaw, &reviewersArray); err != nil {
+		var reviewersMapping map[string]string
+		if err := json.Unmarshal(r.ReviewersRaw, &reviewersMapping); err != nil {
+			return err
+		}
+
+		for k, _ := range reviewersMapping {
+			reviewersArray = append(reviewersArray, k)
+		}
+	}
+
+	r.Reviewers = reviewersArray
+	r.ReviewersRaw = json.RawMessage{}
+
+	utils.Dump(r)
+
+	return nil
 }
 
 // GetFirstCommit returns the first commit that is included in the review
@@ -205,6 +235,7 @@ func (arc Arcanist) ListOpenReviews(repo repository.Repo) []review_utils.Phabric
 	for _, r := range response.Response {
 		reviews = append(reviews, r)
 	}
+	//utils.Dump(reviews)
 	return reviews
 }
 
@@ -483,6 +514,8 @@ func (arc Arcanist) mirrorCommentsIntoReview(repo repository.Repo, differentialR
 		}
 	}
 	arc.mirrorStatusesForEachCommit(r, commitToDiffIDMap)
+
+	logger.Infof("Fuck r=%s", r)
 
 	existingComments := differentialReview.LoadComments()
 	inlineRequests, commentRequests := differentialReview.buildCommentRequests(r.Comments, existingComments, commitToDiffMap)
