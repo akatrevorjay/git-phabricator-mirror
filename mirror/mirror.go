@@ -52,14 +52,14 @@ func mirrorRepoToReview(repo repository.Repo, tool review_utils.Tool, syncToRemo
 
 	stateHash, err := repo.GetRepoStateHash()
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	if processedStates[repo.GetPath()] != stateHash {
 		log.Print("Mirroring repo: ", repo)
 		for _, r := range review.ListAll(repo) {
 			reviewJson, err := r.GetJSON()
 			if err != nil {
-				log.Fatal(err)
+				log.Panic(err)
 			}
 			log.Println("Mirroring review: ", reviewJson)
 			existingComments[r.Revision] = r.Comments
@@ -78,7 +78,7 @@ ReviewLoop:
 			log.Println("Processing review: ", reviewCommit)
 			r, err := review.GetSummary(repo, reviewCommit)
 			if err != nil {
-				log.Fatal(err)
+				log.Panic(err)
 			} else if r == nil {
 				log.Printf("Skipping unknown review %q", reviewCommit)
 				continue ReviewLoop
@@ -90,7 +90,7 @@ ReviewLoop:
 					// The comment is new.
 					note, err := c.Write()
 					if err != nil {
-						log.Fatal(err)
+						log.Panic(err)
 					}
 					log.Printf("Appending a comment: %s", string(note))
 					repo.AppendNote(comment.Ref, reviewCommit, note)

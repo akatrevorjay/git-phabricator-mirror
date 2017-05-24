@@ -84,7 +84,7 @@ func findLastCommit(commitsMap map[string]interface{}) string {
 			if ok {
 				timestamp, err := strconv.Atoi(timestampString)
 				if err != nil {
-					log.Fatal(err)
+					log.Panic(err)
 				}
 				timestamps = append(timestamps, timestamp)
 				timestampCommitMap[timestamp] = commit

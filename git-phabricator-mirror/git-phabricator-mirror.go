@@ -61,7 +61,7 @@ func main() {
 	for {
 		repos, err := findRepos(*searchDir)
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Panic(err.Error())
 		}
 		for _, repo := range repos {
 			mirror.Repo(repo, *syncToRemote)

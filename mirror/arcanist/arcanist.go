@@ -81,7 +81,7 @@ func runArcCommandOrDie(method string, request interface{}, response interface{}
 	cmd := exec.Command("arc", "call-conduit", method)
 	input, err := json.Marshal(request)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	log.Print("Running conduit request: ", method, string(input))
 	cmd.Stdin = strings.NewReader(string(input))
@@ -89,7 +89,7 @@ func runArcCommandOrDie(method string, request interface{}, response interface{}
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	go func() {
 		time.Sleep(arcanistRequestTimeout)
@@ -97,11 +97,11 @@ func runArcCommandOrDie(method string, request interface{}, response interface{}
 	}()
 	if err := cmd.Wait(); err != nil {
 		log.Print("arc", "call-conduit", method, string(input), stdout.String())
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	log.Print("Received conduit response ", stdout.String())
 	if err = json.Unmarshal(stdout.Bytes(), response); err != nil {
-		log.Fatal(err)
+		log.Panicf(err)
 	}
 }
 
@@ -287,7 +287,7 @@ type differentialCloseResponse struct {
 func (differentialReview DifferentialReview) close() {
 	reviewID, err := strconv.Atoi(differentialReview.ID)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	closeRequest := differentialCloseRequest{reviewID}
 	var closeResponse differentialCloseResponse
@@ -518,7 +518,7 @@ func (arc Arcanist) reportUnitResults(diffID int, unitReport ci.Report) {
 		err = arc.setDiffProperty(diffID, unitDiffPropertyName, diffProperty)
 	}
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Panic(err.Error())
 	}
 }
 
@@ -553,7 +553,7 @@ func (arc Arcanist) reportLintResults(diffID int, lintResults []analyses.Analyze
 		err = arc.setDiffProperty(diffID, lintDiffPropertyName, diffProperty)
 	}
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Panic(err.Error())
 	}
 }
 
@@ -569,7 +569,7 @@ func (arc Arcanist) updateReviewDiffs(repo repository.Repo, differentialReview D
 	headRevision := headCommit
 	mergeBase, err := repo.MergeBase(req.TargetRef, headRevision)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	for _, hashPair := range differentialReview.Hashes {
 		if len(hashPair) == 2 && hashPair[0] == commitHashType && hashPair[1] == headCommit {
@@ -582,7 +582,7 @@ func (arc Arcanist) updateReviewDiffs(repo repository.Repo, differentialReview D
 
 	diff, err := arc.createDifferentialDiff(repo, mergeBase, headRevision, req, differentialReview.Diffs)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	if diff == nil {
 		// This means that phabricator silently refused to create the diff. Just move on.
@@ -593,7 +593,7 @@ func (arc Arcanist) updateReviewDiffs(repo repository.Repo, differentialReview D
 	var updateResponse differentialUpdateRevisionResponse
 	runArcCommandOrDie("differential.updaterevision", updateRequest, &updateResponse)
 	if updateResponse.Error != "" {
-		log.Fatal(updateResponse.ErrorMessage)
+		log.Panic(updateResponse.ErrorMessage)
 	}
 }
 
@@ -645,7 +645,7 @@ func (arc Arcanist) EnsureRequestExists(repo repository.Repo, review review.Revi
 
 	diff, err := arc.createDifferentialDiff(repo, base, revision, req, []string{})
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	if diff == nil {
 		// The revision is already merged in, ignore it.
@@ -653,7 +653,7 @@ func (arc Arcanist) EnsureRequestExists(repo repository.Repo, review review.Revi
 	}
 	rev, err := arc.createDifferentialRevision(repo, revision, diff.ID, req)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	log.Printf("Created diff %v and revision %v for the review of %s", diff, rev, revision)
 
