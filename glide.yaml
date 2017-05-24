@@ -1,0 +1,15 @@
+package: github.com/google/git-phabricator-mirror
+import:
+- package: github.com/akatrevorjay/git-appraise
+  subpackages:
+  - repository
+  - review
+  - review/analyses
+  - review/ci
+  - review/comment
+  - review/request
+- package: github.com/akatrevorjay/git-phabricator-mirror
+  subpackages:
+  - mirror
+  - mirror/arcanist
+  - mirror/review

@@ -1,0 +1,28 @@
+hash: 84664ba60fc195ccd9f1467ac876603359fc4ab289540a48191e123bc463caeb
+updated: 2017-05-23T22:07:48.518314959-07:00
+imports:
+- name: github.com/akatrevorjay/git-appraise
+  version: bcf5cfe2d8d4739ba172a20a6e81328011235638
+  subpackages:
+  - repository
+  - review
+  - review/analyses
+  - review/ci
+  - review/comment
+  - review/request
+- name: github.com/akatrevorjay/git-phabricator-mirror
+  version: a2bd3f87817472bf31d8a158989c94e4663d8fd8
+  subpackages:
+  - mirror
+  - mirror/arcanist
+  - mirror/review
+- name: github.com/google/git-appraise
+  version: cf3a505d71afe602808eaf9ebba2b66021fe16f9
+  subpackages:
+  - repository
+  - review
+  - review/analyses
+  - review/ci
+  - review/comment
+  - review/request
+testImports: []
