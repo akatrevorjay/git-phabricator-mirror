@@ -101,7 +101,7 @@ func runArcCommandOrDie(method string, request interface{}, response interface{}
 	}
 	log.Print("Received conduit response ", stdout.String())
 	if err = json.Unmarshal(stdout.Bytes(), response); err != nil {
-		log.Panicf(err)
+		log.Panic(err)
 	}
 }
 
