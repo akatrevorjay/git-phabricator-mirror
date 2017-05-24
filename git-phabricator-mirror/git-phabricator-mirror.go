@@ -18,8 +18,8 @@ package main
 
 import (
 	"flag"
-	"github.com/google/git-appraise/repository"
-	"github.com/google/git-phabricator-mirror/mirror"
+	"github.com/akatrevorjay/git-appraise/repository"
+	"github.com/akatrevorjay/git-phabricator-mirror/mirror"
 	"log"
 	"os"
 	"path/filepath"

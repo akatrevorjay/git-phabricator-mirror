@@ -18,8 +18,8 @@ limitations under the License.
 package review
 
 import (
-	"github.com/google/git-appraise/review"
-	"github.com/google/git-appraise/review/comment"
+	"github.com/akatrevorjay/git-appraise/review"
+	"github.com/akatrevorjay/git-appraise/review/comment"
 	"strings"
 )
 

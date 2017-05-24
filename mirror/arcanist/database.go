@@ -29,7 +29,7 @@ package arcanist
 import (
 	"bytes"
 	"fmt"
-	"github.com/google/git-appraise/review/comment"
+	"github.com/akatrevorjay/git-appraise/review/comment"
 	"log"
 	"os/exec"
 	"strconv"
